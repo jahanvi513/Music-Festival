@@ -1,183 +1,181 @@
 //Music Festival Ticket Management System
 //Assumption: Tickets are non-refundable, that is, cancellation services are not offered.
 
-#include<stdio.h>
-#include<stdlib.h>
-#include<string.h>
-#include<stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdbool.h>
 
-//Defining functions
+#define TABLE_SIZE 500
+
+// Defining functions
 int main();
 void create(char nam[25], char gen[10], int id, int age, bool checkedIn);
 void book_ticket();
 void search_ticket();
 void show_details(int ticket_id);
 void last_used_id();
+unsigned int hash(int id);
 
-int max_limit = 500;  //Predefined number of tickets
-struct customer*head = NULL;  //Initializing head of linked list
-int ticket=0;  //Ticket counter
-int last_id=0;  //To keep track of booked tickets
-int verification = 0;  //To track number of people entering
+struct customer* hash_table[TABLE_SIZE];  // Hash table
+int ticket = 0;  // Ticket counter
+int last_id = 0;  // To keep track of booked tickets
+int verification = 0;  // To track number of people entering
 
-void saving_data(struct customer*);
+void saving_data();
 
-//Defining structure
-struct customer{
+// Defining structure
+struct customer {
     char name[20];
     char gender[10];
     int id;
     int age;
     bool checkedIn;
-    struct customer*link;
+    struct customer* next;
 };
 
-//Function to create node for each customer
-void create(char nam[25], char gen[10], int id, int a, bool checkedIn)
-{
-    struct customer *newptr = NULL, *ptr;
-    newptr = (struct customer*)malloc(sizeof(struct customer));
-
-    strcpy(newptr->name, nam);
-    strcpy(newptr->gender, gen);
-    newptr->id = id;
-    newptr->age = a;
-    newptr->checkedIn  = checkedIn;
-    newptr->link = NULL;
-
-    if (head == NULL)
-        head = newptr;
-    else
-    {
-        ptr = head;
-        while (ptr->link != NULL)
-            ptr = ptr->link;
-        ptr->link = newptr;
-    }
-    //updating last id used
-    if(id>last_id)
-    last_id=id;
+// Hash function
+unsigned int hash(int id) {
+    return id % TABLE_SIZE;
 }
 
-//Function to book ticket
-void book_ticket()
-{
+// Function to create a new customer entry
+void create(char nam[25], char gen[10], int id, int age, bool checkedIn) {
+    struct customer* new_customer = (struct customer*)malloc(sizeof(struct customer));
+    strcpy(new_customer->name, nam);
+    strcpy(new_customer->gender, gen);
+    new_customer->id = id;
+    new_customer->age = age;
+    new_customer->checkedIn = checkedIn;
+    new_customer->next = NULL;
+
+    int index = hash(id);
+    if (hash_table[index] == NULL) {
+        hash_table[index] = new_customer;
+    } else {
+        struct customer* temp = hash_table[index];
+        while (temp->next != NULL) {
+            temp = temp->next;
+        }
+        temp->next = new_customer;
+    }
+
+    // Updating last id used
+    if (id > last_id) {
+        last_id = id;
+    }
+}
+
+// Function to book tickets
+void book_ticket() {
     int n;
-    printf("\tEvent:Music Festival\n");
-    printf("\tDate:13 May 2023\n");
-    printf("\tPrice:200\n");
-    printf("\nEnter number of tickets:");
+    printf("\tEvent: Music Festival\n");
+    printf("\tDate: 13 May 2023\n");
+    printf("\tPrice: 200\n");
+    printf("\nEnter number of tickets: ");
     scanf("%d", &n);
 
     char nam[25], gen[10];
-    int a, id;
-    for(int i=1; i<=n; i++)
-    {
-        //incrementing value of ticket to generate unique ticket id
-        ticket+=1;
+    int age, id;
+    for (int i = 1; i <= n; i++) {
+        // Incrementing value of ticket to generate unique ticket id
+        ticket += 1;
 
-        //checking for availability of tickets
-        if(ticket>max_limit)
-        {
+        // Checking for availability of tickets
+        if (ticket > TABLE_SIZE) {
             printf("\nSOLD OUT\n");
+            return;
         }
-        //taking customer details if tickets are available
-        else
-        {
-        id=ticket;
-        printf("\nEnter Name:");
+
+        // Taking customer details if tickets are available
+        id = ticket;
+        printf("\nEnter Name: ");
         scanf("%s", nam);
-        printf("\nEnter Gender:");
+        printf("\nEnter Gender: ");
         scanf("%s", gen);
-        printf("\nEnter Age:");
-        scanf("%d", &a);
-        create(nam, gen, id, a, 0);
-        }
+        printf("\nEnter Age: ");
+        scanf("%d", &age);
+        create(nam, gen, id, age, false);
     }
-    saving_data(head);
+    saving_data();
     printf("\nBooking Successful!\nThank you for booking tickets!\n\n");
 }
 
-//Function to display details of tickets
-void show_details(int t)
-{
-    struct customer* ptr = head;
-    bool notFound=1;  //To keep track if ticket id is not found
-    while (ptr != NULL)
-    {
-        if (ptr->id == t)
-        {
-            notFound=0;
-            printf("\nTicket ID: %d\n", ptr->id);
-            printf("Name: %s\n", ptr->name);
-            printf("Gender: %s\n", ptr->gender);
-            printf("Age: %d\n", ptr->age);
-            printf("Checked in: %d\n", ptr->checkedIn);
+// Function to display details of tickets
+void show_details(int t) {
+    int index = hash(t);
+    struct customer* temp = hash_table[index];
+    bool notFound = true;  // To keep track if ticket id is not found
+
+    while (temp != NULL) {
+        if (temp->id == t) {
+            notFound = false;
+            printf("\nTicket ID: %d\n", temp->id);
+            printf("Name: %s\n", temp->name);
+            printf("Gender: %s\n", temp->gender);
+            printf("Age: %d\n", temp->age);
+            printf("Checked in: %d\n", temp->checkedIn);
         }
-        ptr = ptr->link;
+        temp = temp->next;
     }
-    if(notFound)
-    printf("Ticket not found\n");
+
+    if (notFound) {
+        printf("Ticket not found\n");
+    }
 }
 
-//Function to search for ticket
-void search_ticket()
-{
+// Function to search for ticket
+void search_ticket() {
     int t;
-    printf("Enter Ticket ID:");
+    printf("Enter Ticket ID: ");
     scanf("%d", &t);
-    struct customer* ptr = head;
-    bool foundUser = 0;   //To keep track if ticket id is not found
-    printf("Total checked in users: %d \n", verification);
-    while(ptr!=NULL)
-    {
-        if(ptr->id==t)
-        {
-          foundUser = 1;
-          printf("Valid Ticket id\n");
-          if (ptr->checkedIn == 0)
-          {
-            printf("Checking in user\n");
-            ptr->checkedIn = 1;
-            verification += 1;
-            saving_data(head);
-          }
-          else
-          {
-            printf("User already checked in\n");
-          }
-          show_details(t);
+
+    int index = hash(t);
+    struct customer* temp = hash_table[index];
+    bool foundUser = false;   // To keep track if ticket id is not found
+
+    printf("Total checked in users: %d\n", verification);
+    while (temp != NULL) {
+        if (temp->id == t) {
+            foundUser = true;
+            printf("Valid Ticket ID\n");
+            if (!temp->checkedIn) {
+                printf("Checking in user\n");
+                temp->checkedIn = true;
+                verification += 1;
+                saving_data();
+            } else {
+                printf("User already checked in\n");
+            }
+            show_details(t);
+            break;
         }
-        ptr = ptr->link;
+        temp = temp->next;
     }
-    if(foundUser == 0) { 
-      printf("\nInvalid ID\n");
+
+    if (!foundUser) {
+        printf("\nInvalid ID\n");
     }
 }
 
-//Function to store details in txt file
-void saving_data(struct customer* head)
-{
+// Function to store details in txt file
+void saving_data() {
     FILE *fptr;
     fptr = fopen("Customer_details.txt", "w");
 
-    while(head!=NULL)
-    {
-        fprintf(fptr, "%d\t", head->id);
-        fprintf(fptr, "%s\t", head->name);
-        fprintf(fptr, "%s\t", head->gender);
-        fprintf(fptr, "%d\t", head->age);
-        fprintf(fptr, "%d\n", head->checkedIn);
-        head = head->link;
+    for (int i = 0; i < TABLE_SIZE; i++) {
+        struct customer* temp = hash_table[i];
+        while (temp != NULL) {
+            fprintf(fptr, "%d\t%s\t%s\t%d\t%d\n", temp->id, temp->name, temp->gender, temp->age, temp->checkedIn);
+            temp = temp->next;
+        }
     }
+
     fclose(fptr);
 }
 
-//Function to read text file and check the last ticket id used
-void last_used_id()
-{
-    head=NULL;
-    verification = 0;
+// Function to read text file and check the last ticket id used
+void last_used_id() {
     FILE *fptr;
     fptr = fopen("Customer_details.txt", "r");
 
@@ -190,52 +188,52 @@ void last_used_id()
     int age;
     int checkedIn;
 
-    while(fscanf(fptr, "%d\t%s\t%s\t%d\t%d\n", &id, name, gender, &age, &checkedIn) == 5)  //fscanf is reading 5 values from the file
-    {
-        if (id > last_id)
+    while (fscanf(fptr, "%d\t%s\t%s\t%d\t%d\n", &id, name, gender, &age, &checkedIn) == 5) {
+        if (id > last_id) {
             last_id = id;
+        }
         create(name, gender, id, age, checkedIn);
-        if (checkedIn == 1)
-          verification += 1;
+        if (checkedIn) {
+            verification += 1;
+        }
     }
 
     fclose(fptr);
 }
 
-//Driver Code
-int main()
-{
+// Driver code
+int main() {
     last_used_id();
     ticket = last_id;
     int choice;
     printf("*****\n");
-    printf("\tMUSIC FESTIVAL TICKET BOOKING\t\n");
+    printf("\tMUSIC FESTIVAL TICKET BOOKING\n");
     printf("*****\n");
     printf("\tMAIN MENU\n");
-    printf("\t1.Book Ticket\n");
-    printf("\t2.Search Ticket\n");
-    printf("\t3.Exit\n");
-    printf("Enter Choice:");
+    printf("\t1. Book Ticket\n");
+    printf("\t2. Search Ticket\n");
+    printf("\t3. Exit\n");
+    printf("Enter Choice: ");
     scanf("%d", &choice);
 
-    switch(choice)
-    {
+    switch (choice) {
         case 1:
-        book_ticket();
-        break;
-
+            book_ticket();
+            break;
         case 2:
-        search_ticket();
-        break;
-
+            search_ticket();
+            break;
         case 3:
-        printf("Thank you using our ticket booking system!\n");
-        break;
-
+            printf("Thank you for using our ticket booking system!\n");
+            break;
         default:
-        printf("Invalid Input\n");
+            printf("Invalid Input\n");
     }
-    if(choice!=3)
-    main();
+
+    if (choice != 3) {
+        main();
+    }
+
     return 0;
 }
+
